@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<span class="Apple-converted-space">    </span><meta charset="UTF-8">
+<span class="Apple-converted-space">    </span><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<span class="Apple-converted-space">    </span><title><span class="s1">手势控制</span>3D<span class="s1">圣诞树照片云</span></title>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/examples/js/postprocessing/EffectComposer.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/examples/js/postprocessing/RenderPass.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/examples/js/shaders/CopyShader.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://unpkg.com/three@0.158.0/examples/js/postprocessing/ShaderPass.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<span class="Apple-converted-space">    </span><script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<span class="Apple-converted-space">    </span><style>
+<span class="Apple-converted-space">        </span>* {
+<span class="Apple-converted-space">            </span>margin: 0;
+<span class="Apple-converted-space">            </span>padding: 0;
+<span class="Apple-converted-space">            </span>box-sizing: border-box;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>body {
+<span class="Apple-converted-space">            </span>font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+<span class="Apple-converted-space">            </span>background: #0a0a14;
+<span class="Apple-converted-space">            </span>color: #fff;
+<span class="Apple-converted-space">            </span>overflow: hidden;
+<span class="Apple-converted-space">            </span>height: 100vh;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#container {
+<span class="Apple-converted-space">            </span>position: relative;
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>height: 100vh;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#webgl-canvas {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 0;
+<span class="Apple-converted-space">            </span>left: 0;
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>height: 100%;
+<span class="Apple-converted-space">            </span>z-index: 1;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#video-container {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 20px;
+<span class="Apple-converted-space">            </span>right: 20px;
+<span class="Apple-converted-space">            </span>width: 280px;
+<span class="Apple-converted-space">            </span>height: 210px;
+<span class="Apple-converted-space">            </span>border-radius: 12px;
+<span class="Apple-converted-space">            </span>overflow: hidden;
+<span class="Apple-converted-space">            </span>box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+<span class="Apple-converted-space">            </span>z-index: 2;
+<span class="Apple-converted-space">            </span>border: 2px solid rgba(255, 215, 0, 0.3);
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#input-video {
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>height: 100%;
+<span class="Apple-converted-space">            </span>transform: scaleX(-1);
+<span class="Apple-converted-space">            </span>object-fit: cover;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#ui-overlay {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 0;
+<span class="Apple-converted-space">            </span>left: 0;
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>height: 100%;
+<span class="Apple-converted-space">            </span>z-index: 3;
+<span class="Apple-converted-space">            </span>pointer-events: none;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#title {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 30px;
+<span class="Apple-converted-space">            </span>left: 30px;
+<span class="Apple-converted-space">            </span>font-size: 2.5rem;
+<span class="Apple-converted-space">            </span>font-weight: 700;
+<span class="Apple-converted-space">            </span>background: linear-gradient(90deg, #C9B037, #D4AF37, #FFD700);
+<span class="Apple-converted-space">            </span>-webkit-background-clip: text;
+<span class="Apple-converted-space">            </span>background-clip: text;
+<span class="Apple-converted-space">            </span>color: transparent;
+<span class="Apple-converted-space">            </span>text-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#status-panel {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>bottom: 30px;
+<span class="Apple-converted-space">            </span>left: 30px;
+<span class="Apple-converted-space">            </span>max-width: 400px;
+<span class="Apple-converted-space">            </span>background: rgba(20, 40, 20, 0.7);
+<span class="Apple-converted-space">            </span>padding: 20px;
+<span class="Apple-converted-space">            </span>border-radius: 12px;
+<span class="Apple-converted-space">            </span>border-left: 4px solid #228B22;
+<span class="Apple-converted-space">            </span>backdrop-filter: blur(10px);
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#status-panel h3 {
+<span class="Apple-converted-space">            </span>color: #D4AF37;
+<span class="Apple-converted-space">            </span>margin-bottom: 10px;
+<span class="Apple-converted-space">            </span>font-size: 1.2rem;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#current-status {
+<span class="Apple-converted-space">            </span>font-size: 1.5rem;
+<span class="Apple-converted-space">            </span>color: #FFD700;
+<span class="Apple-converted-space">            </span>font-weight: 700;
+<span class="Apple-converted-space">            </span>margin-bottom: 10px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#status-description {
+<span class="Apple-converted-space">            </span>font-size: 0.9rem;
+<span class="Apple-converted-space">            </span>color: #a0e5a0;
+<span class="Apple-converted-space">            </span>margin-bottom: 15px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#instructions {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 30px;
+<span class="Apple-converted-space">            </span>right: 320px;
+<span class="Apple-converted-space">            </span>background: rgba(40, 20, 20, 0.7);
+<span class="Apple-converted-space">            </span>padding: 20px;
+<span class="Apple-converted-space">            </span>border-radius: 12px;
+<span class="Apple-converted-space">            </span>border: 1px solid rgba(220, 20, 60, 0.3);
+<span class="Apple-converted-space">            </span>backdrop-filter: blur(10px);
+<span class="Apple-converted-space">            </span>max-width: 300px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#instructions h3 {
+<span class="Apple-converted-space">            </span>color: #D4AF37;
+<span class="Apple-converted-space">            </span>margin-bottom: 10px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#instructions ul {
+<span class="Apple-converted-space">            </span>list-style-type: none;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#instructions li {
+<span class="Apple-converted-space">            </span>margin-bottom: 8px;
+<span class="Apple-converted-space">            </span>padding-left: 20px;
+<span class="Apple-converted-space">            </span>position: relative;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#instructions li:before {
+<span class="Apple-converted-space">            </span>content: "•";
+<span class="Apple-converted-space">            </span>color: #D4AF37;
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>left: 0;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#gesture-info {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>bottom: 30px;
+<span class="Apple-converted-space">            </span>right: 30px;
+<span class="Apple-converted-space">            </span>background: rgba(20, 20, 40, 0.7);
+<span class="Apple-converted-space">            </span>padding: 15px 25px;
+<span class="Apple-converted-space">            </span>border-radius: 12px;
+<span class="Apple-converted-space">            </span>border: 1px solid rgba(100, 200, 255, 0.3);
+<span class="Apple-converted-space">            </span>backdrop-filter: blur(10px);
+<span class="Apple-converted-space">            </span>text-align: center;
+<span class="Apple-converted-space">            </span>min-width: 180px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#gesture-name {
+<span class="Apple-converted-space">            </span>font-size: 1.5rem;
+<span class="Apple-converted-space">            </span>color: #00ffff;
+<span class="Apple-converted-space">            </span>font-weight: 700;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#loading {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 0;
+<span class="Apple-converted-space">            </span>left: 0;
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>height: 100%;
+<span class="Apple-converted-space">            </span>background: #0a0a14;
+<span class="Apple-converted-space">            </span>display: flex;
+<span class="Apple-converted-space">            </span>flex-direction: column;
+<span class="Apple-converted-space">            </span>justify-content: center;
+<span class="Apple-converted-space">            </span>align-items: center;
+<span class="Apple-converted-space">            </span>z-index: 10;
+<span class="Apple-converted-space">            </span>transition: opacity 0.5s;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>.loader {
+<span class="Apple-converted-space">            </span>width: 60px;
+<span class="Apple-converted-space">            </span>height: 60px;
+<span class="Apple-converted-space">            </span>border: 5px solid rgba(34, 139, 34, 0.2);
+<span class="Apple-converted-space">            </span>border-top: 5px solid #228B22;
+<span class="Apple-converted-space">            </span>border-radius: 50%;
+<span class="Apple-converted-space">            </span>animation: spin 1s linear infinite;
+<span class="Apple-converted-space">            </span>margin-bottom: 20px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>@keyframes spin {
+<span class="Apple-converted-space">            </span>0% { transform: rotate(0deg); }
+<span class="Apple-converted-space">            </span>100% { transform: rotate(360deg); }
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#photo-upload {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 120px;
+<span class="Apple-converted-space">            </span>left: 30px;
+<span class="Apple-converted-space">            </span>background: rgba(20, 40, 20, 0.7);
+<span class="Apple-converted-space">            </span>padding: 20px;
+<span class="Apple-converted-space">            </span>border-radius: 12px;
+<span class="Apple-converted-space">            </span>border: 1px solid rgba(255, 215, 0, 0.3);
+<span class="Apple-converted-space">            </span>backdrop-filter: blur(10px);
+<span class="Apple-converted-space">            </span>max-width: 300px;
+<span class="Apple-converted-space">            </span>pointer-events: auto;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#photo-upload h3 {
+<span class="Apple-converted-space">            </span>color: #D4AF37;
+<span class="Apple-converted-space">            </span>margin-bottom: 10px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#file-input {
+<span class="Apple-converted-space">            </span>background: rgba(255, 255, 255, 0.1);
+<span class="Apple-converted-space">            </span>color: white;
+<span class="Apple-converted-space">            </span>padding: 8px;
+<span class="Apple-converted-space">            </span>border-radius: 6px;
+<span class="Apple-converted-space">            </span>border: 1px solid rgba(255, 215, 0, 0.5);
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>margin-bottom: 10px;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#upload-btn {
+<span class="Apple-converted-space">            </span>background: linear-gradient(90deg, #228B22, #32CD32);
+<span class="Apple-converted-space">            </span>color: white;
+<span class="Apple-converted-space">            </span>border: none;
+<span class="Apple-converted-space">            </span>padding: 10px 20px;
+<span class="Apple-converted-space">            </span>border-radius: 6px;
+<span class="Apple-converted-space">            </span>cursor: pointer;
+<span class="Apple-converted-space">            </span>font-weight: bold;
+<span class="Apple-converted-space">            </span>width: 100%;
+<span class="Apple-converted-space">            </span>transition: all 0.3s;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#upload-btn:hover {
+<span class="Apple-converted-space">            </span>background: linear-gradient(90deg, #32CD32, #228B22);
+<span class="Apple-converted-space">            </span>transform: translateY(-2px);
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#element-count {
+<span class="Apple-converted-space">            </span>position: absolute;
+<span class="Apple-converted-space">            </span>top: 120px;
+<span class="Apple-converted-space">            </span>right: 320px;
+<span class="Apple-converted-space">            </span>background: rgba(40, 20, 20, 0.7);
+<span class="Apple-converted-space">            </span>padding: 15px 25px;
+<span class="Apple-converted-space">            </span>border-radius: 12px;
+<span class="Apple-converted-space">            </span>border: 1px solid rgba(220, 20, 60, 0.3);
+<span class="Apple-converted-space">            </span>backdrop-filter: blur(10px);
+<span class="Apple-converted-space">            </span>text-align: center;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span>#count {
+<span class="Apple-converted-space">            </span>font-size: 1.5rem;
+<span class="Apple-converted-space">            </span>color: #FFD700;
+<span class="Apple-converted-space">            </span>font-weight: 700;
+<span class="Apple-converted-space">        </span>}
+<span class="Apple-converted-space">    </span></style>
+</head>
+<body>
+<span class="Apple-converted-space">    </span><div id="container">
+<span class="Apple-converted-space">        </span><canvas id="webgl-canvas"></canvas>
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span><div id="video-container">
+<span class="Apple-converted-space">            </span><video id="input-video" autoplay playsinline></video>
+<span class="Apple-converted-space">        </span></div>
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span><div id="ui-overlay">
+<span class="Apple-converted-space">            </span><h1 id="title"><span class="s1">手势控制圣诞树照片云</span></h1>
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span><div id="instructions">
+<span class="Apple-converted-space">                </span><h3><span class="s1">手势控制说明</span></h3>
+<span class="Apple-converted-space">                </span><ul>
+<span class="Apple-converted-space">                    </span><li><strong><span class="s1">张开五指</span></strong> <span class="s2">→</span> <span class="s1">散开状态</span></li>
+<span class="Apple-converted-space">                    </span><li><strong><span class="s1">握拳</span></strong> <span class="s2">→</span> <span class="s1">合拢为圣诞树</span></li>
+<span class="Apple-converted-space">                    </span><li><strong><span class="s1">旋转手部</span></strong> <span class="s2">→</span> <span class="s1">旋转视角</span></li>
+<span class="Apple-converted-space">                    </span><li><strong><span class="s1">抓取手势</span></strong> <span class="s2">→</span> <span class="s1">放大照片</span></li>
+<span class="Apple-converted-space">                </span></ul>
+<span class="Apple-converted-space">            </span></div>
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span><div id="status-panel">
+<span class="Apple-converted-space">                </span><h3><span class="s1">当前状态</span></h3>
+<span class="Apple-converted-space">                </span><div id="current-status"><span class="s1">合拢态</span> (<span class="s1">圣诞树</span>)</div>
+<span class="Apple-converted-space">                </span><div id="status-description"><span class="s1">所有元素收拢为圣诞树圆锥体</span></div>
+<span class="Apple-converted-space">                </span><div><span class="s1">元素数量</span>: <span id="total-count">0</span></div>
+<span class="Apple-converted-space">            </span></div>
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span><div id="photo-upload">
+<span class="Apple-converted-space">                </span><h3><span class="s1">上传照片</span></h3>
+<span class="Apple-converted-space">                </span><input type="file" id="file-input" accept="image/*" multiple>
+<span class="Apple-converted-space">                </span><button id="upload-btn"><span class="s1">添加照片到圣诞树</span></button>
+<span class="Apple-converted-space">                </span><p style="font-size: 0.8rem; color: #aaa; margin-top: 10px;"><span class="s1">支持</span>JPG<span class="s1">、</span>PNG<span class="s1">格式</span></p>
+<span class="Apple-converted-space">            </span></div>
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span><div id="element-count">
+<span class="Apple-converted-space">                </span><div><span class="s1">照片数量</span></div>
+<span class="Apple-converted-space">                </span><div id="count">0</div>
+<span class="Apple-converted-space">            </span></div>
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span><div id="gesture-info">
+<span class="Apple-converted-space">                </span><div><span class="s1">当前手势</span></div>
+<span class="Apple-converted-space">                </span><div id="gesture-name"><span class="s1">等待识别</span>...</div>
+<span class="Apple-converted-space">            </span></div>
+<span class="Apple-converted-space">        </span></div>
+<span class="Apple-converted-space">        </span>
+<span class="Apple-converted-space">        </span><div id="loading">
+<span class="Apple-converted-space">            </span><div class="loader"></div>
+<span class="Apple-converted-space">            </span><h2><span class="s1">正在加载模型与</span>3D<span class="s1">场景</span>...</h2>
+<span class="Apple-converted-space">            </span><p><span class="s1">请确保摄像头已启用</span></p>
+<span class="Apple-converted-space">        </span></div>
+<span class="Apple-converted-space">    </span></div>
+<br>
+<span class="Apple-converted-space">    </span><script>
+<span class="Apple-converted-space">        </span>// <span class="s1">主脚本</span>
+<span class="Apple-converted-space">        </span>(async function() {
+<span class="Apple-converted-space">            </span>// <span class="s1">全局变量</span>
+<span class="Apple-converted-space">            </span>let scene, camera, renderer, composer;
+<span class="Apple-converted-space">            </span>let controls, bloomPass;
+<span class="Apple-converted-space">            </span>let elements = [];
+<span class="Apple-converted-space">            </span>let photos = [];
+<span class="Apple-converted-space">            </span>let particleSystem;
+<span class="Apple-converted-space">            </span>let handDetected = false;
+<span class="Apple-converted-space">            </span>let currentGesture = '';
+<span class="Apple-converted-space">            </span>let lastGesture = '';
+<span class="Apple-converted-space">            </span>let currentStatus = 'closed'; // closed, scattered, photo-zoomed
+<span class="Apple-converted-space">            </span>let targetStatus = 'closed';
+<span class="Apple-converted-space">            </span>let transitionProgress = 0;
+<span class="Apple-converted-space">            </span>let transitionSpeed = 0.02;
+<span class="Apple-converted-space">            </span>let rotationEnabled = false;
+<span class="Apple-converted-space">            </span>let lastHandPosition = null;
+<span class="Apple-converted-space">            </span>let cameraRotation = { x: 0, y: 0 };
+<span class="Apple-converted-space">            </span>let selectedPhotoIndex = -1;
+<span class="Apple-converted-space">            </span>let photoTextures = [];
+<span class="Apple-converted-space">            </span>const ELEMENT_COUNT = 400;
+<span class="Apple-converted-space">            </span>const PHOTO_COUNT = 12;
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">初始化</span>Three.js<span class="s1">场景</span>
+<span class="Apple-converted-space">            </span>function initThreeJS() {
+<span class="Apple-converted-space">                </span>// <span class="s1">创建场景</span>
+<span class="Apple-converted-space">                </span>scene = new THREE.Scene();
+<span class="Apple-converted-space">                </span>scene.background = new THREE.Color(0x0a0a14);
+<span class="Apple-converted-space">                </span>scene.fog = new THREE.Fog(0x0a0a14, 50, 200);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建相机</span>
+<span class="Apple-converted-space">                </span>camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+<span class="Apple-converted-space">                </span>camera.position.set(0, 30, 100);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建渲染器</span>
+<span class="Apple-converted-space">                </span>const canvas = document.getElementById('webgl-canvas');
+<span class="Apple-converted-space">                </span>renderer = new THREE.WebGLRenderer({<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                    </span>canvas,<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                    </span>antialias: true,
+<span class="Apple-converted-space">                    </span>alpha: true
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">                </span>renderer.setSize(window.innerWidth, window.innerHeight);
+<span class="Apple-converted-space">                </span>renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+<span class="Apple-converted-space">                </span>renderer.shadowMap.enabled = true;
+<span class="Apple-converted-space">                </span>renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建后期处理效果</span>
+<span class="Apple-converted-space">                </span>composer = new THREE.EffectComposer(renderer);
+<span class="Apple-converted-space">                </span>const renderPass = new THREE.RenderPass(scene, camera);
+<span class="Apple-converted-space">                </span>composer.addPass(renderPass);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建辉光效果</span>
+<span class="Apple-converted-space">                </span>bloomPass = new THREE.UnrealBloomPass(
+<span class="Apple-converted-space">                    </span>new THREE.Vector2(window.innerWidth, window.innerHeight),
+<span class="Apple-converted-space">                    </span>1.5,<span class="Apple-converted-space">  </span>// <span class="s1">强度</span>
+<span class="Apple-converted-space">                    </span>0.4,<span class="Apple-converted-space">  </span>// <span class="s1">半径</span>
+<span class="Apple-converted-space">                    </span>0.85<span class="Apple-converted-space">  </span>// <span class="s1">阈值</span>
+<span class="Apple-converted-space">                </span>);
+<span class="Apple-converted-space">                </span>composer.addPass(bloomPass);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">添加环境光</span>
+<span class="Apple-converted-space">                </span>const ambientLight = new THREE.AmbientLight(0x333333);
+<span class="Apple-converted-space">                </span>scene.add(ambientLight);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">添加金色方向光</span>
+<span class="Apple-converted-space">                </span>const directionalLight = new THREE.DirectionalLight(0xFFD700, 0.8);
+<span class="Apple-converted-space">                </span>directionalLight.position.set(10, 20, 15);
+<span class="Apple-converted-space">                </span>directionalLight.castShadow = true;
+<span class="Apple-converted-space">                </span>scene.add(directionalLight);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">添加红色填充光</span>
+<span class="Apple-converted-space">                </span>const fillLight = new THREE.DirectionalLight(0xFF3366, 0.3);
+<span class="Apple-converted-space">                </span>fillLight.position.set(-10, 10, -10);
+<span class="Apple-converted-space">                </span>scene.add(fillLight);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">添加点光源营造氛围</span>
+<span class="Apple-converted-space">                </span>const pointLight = new THREE.PointLight(0x228B22, 0.5, 100);
+<span class="Apple-converted-space">                </span>pointLight.position.set(0, 30, 0);
+<span class="Apple-converted-space">                </span>scene.add(pointLight);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建粒子系统</span>
+<span class="Apple-converted-space">                </span>createParticleSystem();
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建圣诞树元素</span>
+<span class="Apple-converted-space">                </span>createChristmasTreeElements();
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">创建默认照片</span>
+<span class="Apple-converted-space">                </span>createDefaultPhotos();
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">窗口大小调整处理</span>
+<span class="Apple-converted-space">                </span>window.addEventListener('resize', onWindowResize);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">初始化</span>UI
+<span class="Apple-converted-space">                </span>updateUI();
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">创建粒子系统</span>
+<span class="Apple-converted-space">            </span>function createParticleSystem() {
+<span class="Apple-converted-space">                </span>const particleCount = 2000;
+<span class="Apple-converted-space">                </span>const particles = new THREE.BufferGeometry();
+<span class="Apple-converted-space">                </span>const positions = new Float32Array(particleCount * 3);
+<span class="Apple-converted-space">                </span>const colors = new Float32Array(particleCount * 3);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">圣诞绿、金色、红色</span>
+<span class="Apple-converted-space">                </span>const colorPalette = [
+<span class="Apple-converted-space">                    </span>new THREE.Color(0x228B22), // <span class="s1">森林绿</span>
+<span class="Apple-converted-space">                    </span>new THREE.Color(0x32CD32), //<span class="Apple-converted-space">  </span>LimeGreen
+<span class="Apple-converted-space">                    </span>new THREE.Color(0xFFD700), // <span class="s1">金色</span>
+<span class="Apple-converted-space">                    </span>new THREE.Color(0xC9B037), // <span class="s1">金属金</span>
+<span class="Apple-converted-space">                    </span>new THREE.Color(0xFF3366), // <span class="s1">圣诞红</span>
+<span class="Apple-converted-space">                    </span>new THREE.Color(0x8B0000)<span class="Apple-converted-space">  </span>// <span class="s1">深红</span>
+<span class="Apple-converted-space">                </span>];
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>for (let i = 0; i < particleCount; i++) {
+<span class="Apple-converted-space">                    </span>const i3 = i * 3;
+<span class="Apple-converted-space">                    </span>positions[i3] = (Math.random() - 0.5) * 200;
+<span class="Apple-converted-space">                    </span>positions[i3 + 1] = Math.random() * 100;
+<span class="Apple-converted-space">                    </span>positions[i3 + 2] = (Math.random() - 0.5) * 200;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">随机选择颜色</span>
+<span class="Apple-converted-space">                    </span>const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+<span class="Apple-converted-space">                    </span>colors[i3] = color.r;
+<span class="Apple-converted-space">                    </span>colors[i3 + 1] = color.g;
+<span class="Apple-converted-space">                    </span>colors[i3 + 2] = color.b;
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+<span class="Apple-converted-space">                </span>particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>const particleMaterial = new THREE.PointsMaterial({
+<span class="Apple-converted-space">                    </span>size: 1.5,
+<span class="Apple-converted-space">                    </span>vertexColors: true,
+<span class="Apple-converted-space">                    </span>transparent: true,
+<span class="Apple-converted-space">                    </span>opacity: 0.6,
+<span class="Apple-converted-space">                    </span>blending: THREE.AdditiveBlending
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>particleSystem = new THREE.Points(particles, particleMaterial);
+<span class="Apple-converted-space">                </span>scene.add(particleSystem);
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">创建圣诞树元素</span>
+<span class="Apple-converted-space">            </span>function createChristmasTreeElements() {
+<span class="Apple-converted-space">                </span>const geometries = [
+<span class="Apple-converted-space">                    </span>new THREE.SphereGeometry(1, 8, 8),
+<span class="Apple-converted-space">                    </span>new THREE.BoxGeometry(1.5, 1.5, 1.5),
+<span class="Apple-converted-space">                    </span>new THREE.CylinderGeometry(0.3, 0.3, 3, 6) // <span class="s1">糖果棍</span>
+<span class="Apple-converted-space">                </span>];
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>const materials = [
+<span class="Apple-converted-space">                    </span>new THREE.MeshStandardMaterial({<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                        </span>color: 0x228B22,
+<span class="Apple-converted-space">                        </span>roughness: 0.7,
+<span class="Apple-converted-space">                        </span>metalness: 0.2
+<span class="Apple-converted-space">                    </span>}), // <span class="s1">哑光绿球体</span>
+<span class="Apple-converted-space">                    </span>new THREE.MeshStandardMaterial({<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                        </span>color: 0xFFD700,
+<span class="Apple-converted-space">                        </span>roughness: 0.3,
+<span class="Apple-converted-space">                        </span>metalness: 0.8
+<span class="Apple-converted-space">                    </span>}), // <span class="s1">金属金立方体</span>
+<span class="Apple-converted-space">                    </span>new THREE.MeshStandardMaterial({<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                        </span>color: 0xFF3366,
+<span class="Apple-converted-space">                        </span>roughness: 0.5,
+<span class="Apple-converted-space">                        </span>metalness: 0.1
+<span class="Apple-converted-space">                    </span>})<span class="Apple-converted-space">  </span>// <span class="s1">圣诞红糖果棍</span>
+<span class="Apple-converted-space">                </span>];
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>for (let i = 0; i < ELEMENT_COUNT; i++) {
+<span class="Apple-converted-space">                    </span>const type = Math.floor(Math.random() * geometries.length);
+<span class="Apple-converted-space">                    </span>const materialIndex = Math.floor(Math.random() * materials.length);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>const mesh = new THREE.Mesh(geometries[type], materials[materialIndex]);
+<span class="Apple-converted-space">                    </span>mesh.castShadow = true;
+<span class="Apple-converted-space">                    </span>mesh.receiveShadow = true;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">初始位置（将在更新函数中设置）</span>
+<span class="Apple-converted-space">                    </span>mesh.userData = {
+<span class="Apple-converted-space">                        </span>originalPosition: new THREE.Vector3(),
+<span class="Apple-converted-space">                        </span>targetPosition: new THREE.Vector3(),
+<span class="Apple-converted-space">                        </span>velocity: new THREE.Vector3(),
+<span class="Apple-converted-space">                        </span>type: type,
+<span class="Apple-converted-space">                        </span>index: i
+<span class="Apple-converted-space">                    </span>};
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>elements.push(mesh);
+<span class="Apple-converted-space">                    </span>scene.add(mesh);
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">更新</span>UI<span class="s1">计数</span>
+<span class="Apple-converted-space">                </span>document.getElementById('total-count').textContent = ELEMENT_COUNT;
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">创建默认照片</span>
+<span class="Apple-converted-space">            </span>function createDefaultPhotos() {
+<span class="Apple-converted-space">                </span>// <span class="s1">创建照片纹理占位符</span>
+<span class="Apple-converted-space">                </span>const canvas = document.createElement('canvas');
+<span class="Apple-converted-space">                </span>canvas.width = 256;
+<span class="Apple-converted-space">                </span>canvas.height = 256;
+<span class="Apple-converted-space">                </span>const ctx = canvas.getContext('2d');
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">生成一些默认纹理</span>
+<span class="Apple-converted-space">                </span>const defaultImages = [
+<span class="Apple-converted-space">                    </span>{ color: '#228B22', text: '<span class="s1">圣诞</span>' },
+<span class="Apple-converted-space">                    </span>{ color: '#FFD700', text: '<span class="s1">快乐</span>' },
+<span class="Apple-converted-space">                    </span>{ color: '#FF3366', text: '2023' },
+<span class="Apple-converted-space">                    </span>{ color: '#8B0000', text: '<span class="s1">节日</span>' },
+<span class="Apple-converted-space">                    </span>{ color: '#32CD32', text: '<span class="s1">平安</span>' },
+<span class="Apple-converted-space">                    </span>{ color: '#C9B037', text: '<span class="s1">喜悦</span>' }
+<span class="Apple-converted-space">                </span>];
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>for (let i = 0; i < PHOTO_COUNT; i++) {
+<span class="Apple-converted-space">                    </span>const imgIndex = i % defaultImages.length;
+<span class="Apple-converted-space">                    </span>const imgData = defaultImages[imgIndex];
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">创建纹理</span>
+<span class="Apple-converted-space">                    </span>ctx.fillStyle = imgData.color;
+<span class="Apple-converted-space">                    </span>ctx.fillRect(0, 0, 256, 256);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>ctx.fillStyle = 'white';
+<span class="Apple-converted-space">                    </span>ctx.font = 'bold 40px Arial';
+<span class="Apple-converted-space">                    </span>ctx.textAlign = 'center';
+<span class="Apple-converted-space">                    </span>ctx.textBaseline = 'middle';
+<span class="Apple-converted-space">                    </span>ctx.fillText(imgData.text, 128, 128);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>const texture = new THREE.CanvasTexture(canvas);
+<span class="Apple-converted-space">                    </span>photoTextures.push(texture);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">创建照片平面</span>
+<span class="Apple-converted-space">                    </span>const photoGeometry = new THREE.PlaneGeometry(8, 8);
+<span class="Apple-converted-space">                    </span>const photoMaterial = new THREE.MeshStandardMaterial({
+<span class="Apple-converted-space">                        </span>map: texture,
+<span class="Apple-converted-space">                        </span>side: THREE.DoubleSide,
+<span class="Apple-converted-space">                        </span>roughness: 0.3,
+<span class="Apple-converted-space">                        </span>metalness: 0.1
+<span class="Apple-converted-space">                    </span>});
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>const photo = new THREE.Mesh(photoGeometry, photoMaterial);
+<span class="Apple-converted-space">                    </span>photo.castShadow = true;
+<span class="Apple-converted-space">                    </span>photo.receiveShadow = true;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>photo.userData = {
+<span class="Apple-converted-space">                        </span>originalPosition: new THREE.Vector3(),
+<span class="Apple-converted-space">                        </span>targetPosition: new THREE.Vector3(),
+<span class="Apple-converted-space">                        </span>velocity: new THREE.Vector3(),
+<span class="Apple-converted-space">                        </span>isPhoto: true,
+<span class="Apple-converted-space">                        </span>index: i,
+<span class="Apple-converted-space">                        </span>scale: 1
+<span class="Apple-converted-space">                    </span>};
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>photos.push(photo);
+<span class="Apple-converted-space">                    </span>scene.add(photo);
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">更新</span>UI<span class="s1">照片计数</span>
+<span class="Apple-converted-space">                </span>document.getElementById('count').textContent = PHOTO_COUNT;
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">更新元素位置（根据当前状态）</span>
+<span class="Apple-converted-space">            </span>function updateElements() {
+<span class="Apple-converted-space">                </span>const allElements = [...elements, ...photos];
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">状态过渡</span>
+<span class="Apple-converted-space">                </span>if (currentStatus !== targetStatus) {
+<span class="Apple-converted-space">                    </span>transitionProgress += transitionSpeed;
+<span class="Apple-converted-space">                    </span>if (transitionProgress >= 1) {
+<span class="Apple-converted-space">                        </span>transitionProgress = 1;
+<span class="Apple-converted-space">                        </span>currentStatus = targetStatus;
+<span class="Apple-converted-space">                        </span>updateUI();
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                </span>} else if (transitionProgress > 0) {
+<span class="Apple-converted-space">                    </span>transitionProgress -= transitionSpeed * 0.5;
+<span class="Apple-converted-space">                    </span>if (transitionProgress < 0) transitionProgress = 0;
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">根据状态计算目标位置</span>
+<span class="Apple-converted-space">                </span>for (let i = 0; i < allElements.length; i++) {
+<span class="Apple-converted-space">                    </span>const element = allElements[i];
+<span class="Apple-converted-space">                    </span>const data = element.userData;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>let targetPos = new THREE.Vector3();
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>if (currentStatus === 'closed' || transitionProgress < 1) {
+<span class="Apple-converted-space">                        </span>// <span class="s1">合拢态：圣诞树圆锥体</span>
+<span class="Apple-converted-space">                        </span>const progress = (currentStatus === 'closed') ? 1 : 1 - transitionProgress;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>if (data.isPhoto) {
+<span class="Apple-converted-space">                            </span>// <span class="s1">照片在圣诞树上部分</span>
+<span class="Apple-converted-space">                            </span>const height = 30 + (data.index % 6) * 8;
+<span class="Apple-converted-space">                            </span>const angle = (data.index * 137.5) * Math.PI / 180; // <span class="s1">黄金角度</span>
+<span class="Apple-converted-space">                            </span>const radius = 15 * (1 - height / 80);
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>targetPos.x = Math.cos(angle) * radius * progress;
+<span class="Apple-converted-space">                            </span>targetPos.y = height * progress;
+<span class="Apple-converted-space">                            </span>targetPos.z = Math.sin(angle) * radius * progress;
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>// <span class="s1">照片始终面向相机</span>
+<span class="Apple-converted-space">                            </span>element.lookAt(camera.position);
+<span class="Apple-converted-space">                        </span>} else {
+<span class="Apple-converted-space">                            </span>// <span class="s1">其他元素构成圣诞树</span>
+<span class="Apple-converted-space">                            </span>const height = Math.random() * 60;
+<span class="Apple-converted-space">                            </span>const angle = Math.random() * Math.PI * 2;
+<span class="Apple-converted-space">                            </span>const radius = (1 - height / 60) * 25;
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>targetPos.x = Math.cos(angle) * radius * progress;
+<span class="Apple-converted-space">                            </span>targetPos.y = height * progress;
+<span class="Apple-converted-space">                            </span>targetPos.z = Math.sin(angle) * radius * progress;
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>// <span class="s1">散开态位置</span>
+<span class="Apple-converted-space">                        </span>let scatterPos = new THREE.Vector3();
+<span class="Apple-converted-space">                        </span>scatterPos.x = (Math.random() - 0.5) * 100;
+<span class="Apple-converted-space">                        </span>scatterPos.y = Math.random() * 60;
+<span class="Apple-converted-space">                        </span>scatterPos.z = (Math.random() - 0.5) * 100;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>// <span class="s1">插值</span>
+<span class="Apple-converted-space">                        </span>data.targetPosition.lerpVectors(scatterPos, targetPos,<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                            </span>(currentStatus === 'closed') ? progress : transitionProgress);
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>} else if (currentStatus === 'scattered') {
+<span class="Apple-converted-space">                        </span>// <span class="s1">散开态：随机漂浮</span>
+<span class="Apple-converted-space">                        </span>if (!data.originalPosition.equals(data.targetPosition)) {
+<span class="Apple-converted-space">                            </span>data.originalPosition.copy(data.targetPosition);
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>// <span class="s1">轻微浮动动画</span>
+<span class="Apple-converted-space">                        </span>const time = Date.now() * 0.001;
+<span class="Apple-converted-space">                        </span>targetPos.x = data.originalPosition.x + Math.sin(time * 0.5 + i) * 3;
+<span class="Apple-converted-space">                        </span>targetPos.y = data.originalPosition.y + Math.cos(time * 0.3 + i) * 2;
+<span class="Apple-converted-space">                        </span>targetPos.z = data.originalPosition.z + Math.sin(time * 0.4 + i) * 3;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>data.targetPosition.copy(targetPos);
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>} else if (currentStatus === 'photo-zoomed' && selectedPhotoIndex >= 0) {
+<span class="Apple-converted-space">                        </span>// <span class="s1">照片放大态</span>
+<span class="Apple-converted-space">                        </span>const selectedPhoto = photos[selectedPhotoIndex];
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>if (element === selectedPhoto) {
+<span class="Apple-converted-space">                            </span>// <span class="s1">放大选中的照片</span>
+<span class="Apple-converted-space">                            </span>targetPos.set(0, 30, 0);
+<span class="Apple-converted-space">                            </span>element.scale.lerp(new THREE.Vector3(3, 3, 3), 0.1);
+<span class="Apple-converted-space">                            </span>element.lookAt(camera.position);
+<span class="Apple-converted-space">                        </span>} else if (data.isPhoto) {
+<span class="Apple-converted-space">                            </span>// <span class="s1">其他照片移到背景</span>
+<span class="Apple-converted-space">                            </span>const angle = (data.index * 137.5) * Math.PI / 180;
+<span class="Apple-converted-space">                            </span>const radius = 50;
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>targetPos.x = Math.cos(angle) * radius;
+<span class="Apple-converted-space">                            </span>targetPos.y = 30;
+<span class="Apple-converted-space">                            </span>targetPos.z = Math.sin(angle) * radius;
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>element.scale.lerp(new THREE.Vector3(0.5, 0.5, 0.5), 0.1);
+<span class="Apple-converted-space">                            </span>element.lookAt(camera.position);
+<span class="Apple-converted-space">                        </span>} else {
+<span class="Apple-converted-space">                            </span>// <span class="s1">其他元素保持在散开状态</span>
+<span class="Apple-converted-space">                            </span>targetPos.copy(data.originalPosition);
+<span class="Apple-converted-space">                            </span>element.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>data.targetPosition.copy(targetPos);
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">物理运动（速度</span>+<span class="s1">加速度）</span>
+<span class="Apple-converted-space">                    </span>const acceleration = new THREE.Vector3()
+<span class="Apple-converted-space">                        </span>.subVectors(data.targetPosition, element.position)
+<span class="Apple-converted-space">                        </span>.multiplyScalar(0.05);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>data.velocity.add(acceleration);
+<span class="Apple-converted-space">                    </span>data.velocity.multiplyScalar(0.95); // <span class="s1">阻尼</span>
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>element.position.add(data.velocity);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">缓慢旋转</span>
+<span class="Apple-converted-space">                    </span>if (currentStatus === 'scattered') {
+<span class="Apple-converted-space">                        </span>element.rotation.x += 0.01;
+<span class="Apple-converted-space">                        </span>element.rotation.y += 0.015;
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">更新粒子系统</span>
+<span class="Apple-converted-space">                </span>if (particleSystem) {
+<span class="Apple-converted-space">                    </span>particleSystem.rotation.y += 0.002;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">根据状态调整粒子</span>
+<span class="Apple-converted-space">                    </span>const positions = particleSystem.geometry.attributes.position.array;
+<span class="Apple-converted-space">                    </span>const time = Date.now() * 0.001;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>for (let i = 0; i < positions.length; i += 3) {
+<span class="Apple-converted-space">                        </span>if (currentStatus === 'closed') {
+<span class="Apple-converted-space">                            </span>// <span class="s1">粒子向中心收缩</span>
+<span class="Apple-converted-space">                            </span>const dx = positions[i];
+<span class="Apple-converted-space">                            </span>const dy = positions[i + 1];
+<span class="Apple-converted-space">                            </span>const dz = positions[i + 2];
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+<span class="Apple-converted-space">                            </span>if (dist > 0.1) {
+<span class="Apple-converted-space">                                </span>positions[i] *= 0.995;
+<span class="Apple-converted-space">                                </span>positions[i + 1] *= 0.995;
+<span class="Apple-converted-space">                                </span>positions[i + 2] *= 0.995;
+<span class="Apple-converted-space">                            </span>}
+<span class="Apple-converted-space">                        </span>} else {
+<span class="Apple-converted-space">                            </span>// <span class="s1">粒子轻微浮动</span>
+<span class="Apple-converted-space">                            </span>positions[i] += Math.sin(time + i) * 0.05;
+<span class="Apple-converted-space">                            </span>positions[i + 1] += Math.cos(time * 0.7 + i) * 0.05;
+<span class="Apple-converted-space">                            </span>positions[i + 2] += Math.sin(time * 0.5 + i) * 0.05;
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>particleSystem.geometry.attributes.position.needsUpdate = true;
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">手势识别与处理</span>
+<span class="Apple-converted-space">            </span>function initMediaPipeHands() {
+<span class="Apple-converted-space">                </span>const videoElement = document.getElementById('input-video');
+<span class="Apple-converted-space">                </span>const hands = new Hands({
+<span class="Apple-converted-space">                    </span>locateFile: (file) => {
+<span class="Apple-converted-space">                        </span>return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>hands.setOptions({
+<span class="Apple-converted-space">                    </span>maxNumHands: 1,
+<span class="Apple-converted-space">                    </span>modelComplexity: 1,
+<span class="Apple-converted-space">                    </span>minDetectionConfidence: 0.6,
+<span class="Apple-converted-space">                    </span>minTrackingConfidence: 0.6
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>hands.onResults(onHandResults);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">启动摄像头</span>
+<span class="Apple-converted-space">                </span>const camera = new Camera(videoElement, {
+<span class="Apple-converted-space">                    </span>onFrame: async () => {
+<span class="Apple-converted-space">                        </span>await hands.send({image: videoElement});
+<span class="Apple-converted-space">                    </span>},
+<span class="Apple-converted-space">                    </span>width: 640,
+<span class="Apple-converted-space">                    </span>height: 480
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>camera.start();
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">隐藏加载界面</span>
+<span class="Apple-converted-space">                </span>setTimeout(() => {
+<span class="Apple-converted-space">                    </span>document.getElementById('loading').style.opacity = '0';
+<span class="Apple-converted-space">                    </span>setTimeout(() => {
+<span class="Apple-converted-space">                        </span>document.getElementById('loading').style.display = 'none';
+<span class="Apple-converted-space">                    </span>}, 500);
+<span class="Apple-converted-space">                </span>}, 2500);
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">处理手部检测结果</span>
+<span class="Apple-converted-space">            </span>function onHandResults(results) {
+<span class="Apple-converted-space">                </span>handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>if (handDetected) {
+<span class="Apple-converted-space">                    </span>const landmarks = results.multiHandLandmarks[0];
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">计算手部中心位置</span>
+<span class="Apple-converted-space">                    </span>let sumX = 0, sumY = 0;
+<span class="Apple-converted-space">                    </span>landmarks.forEach(lm => {
+<span class="Apple-converted-space">                        </span>sumX += lm.x;
+<span class="Apple-converted-space">                        </span>sumY += lm.y;
+<span class="Apple-converted-space">                    </span>});
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>const centerX = sumX / landmarks.length;
+<span class="Apple-converted-space">                    </span>const centerY = sumY / landmarks.length;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">识别手势</span>
+<span class="Apple-converted-space">                    </span>const gesture = recognizeGesture(landmarks);
+<span class="Apple-converted-space">                    </span>currentGesture = gesture;
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">更新手势显示</span>
+<span class="Apple-converted-space">                    </span>document.getElementById('gesture-name').textContent =<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                        </span>getGestureName(gesture);
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">手势控制逻辑</span>
+<span class="Apple-converted-space">                    </span>if (gesture !== lastGesture) {
+<span class="Apple-converted-space">                        </span>handleGestureChange(gesture);
+<span class="Apple-converted-space">                        </span>lastGesture = gesture;
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>// <span class="s1">手旋转控制视角</span>
+<span class="Apple-converted-space">                    </span>if (rotationEnabled && lastHandPosition) {
+<span class="Apple-converted-space">                        </span>const dx = centerX - lastHandPosition.x;
+<span class="Apple-converted-space">                        </span>const dy = centerY - lastHandPosition.y;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>cameraRotation.x += dy * 3;
+<span class="Apple-converted-space">                        </span>cameraRotation.y += dx * 3;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                        </span>// <span class="s1">限制旋转角度</span>
+<span class="Apple-converted-space">                        </span>cameraRotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, cameraRotation.x));
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                    </span>lastHandPosition = { x: centerX, y: centerY };
+<span class="Apple-converted-space">                    </span>
+<span class="Apple-converted-space">                </span>} else {
+<span class="Apple-converted-space">                    </span>currentGesture = '';
+<span class="Apple-converted-space">                    </span>document.getElementById('gesture-name').textContent = "<span class="s1">等待识别</span>...";
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">手势识别函数</span>
+<span class="Apple-converted-space">            </span>function recognizeGesture(landmarks) {
+<span class="Apple-converted-space">                </span>// <span class="s1">获取关键点</span>
+<span class="Apple-converted-space">                </span>const wrist = landmarks[0];
+<span class="Apple-converted-space">                </span>const thumbTip = landmarks[4];
+<span class="Apple-converted-space">                </span>const indexTip = landmarks[8];
+<span class="Apple-converted-space">                </span>const middleTip = landmarks[12];
+<span class="Apple-converted-space">                </span>const ringTip = landmarks[16];
+<span class="Apple-converted-space">                </span>const pinkyTip = landmarks[20];
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">计算指尖到手腕的距离</span>
+<span class="Apple-converted-space">                </span>const distance = (p1, p2) => {
+<span class="Apple-converted-space">                    </span>const dx = p1.x - p2.x;
+<span class="Apple-converted-space">                    </span>const dy = p1.y - p2.y;
+<span class="Apple-converted-space">                    </span>const dz = p1.z - p2.z;
+<span class="Apple-converted-space">                    </span>return Math.sqrt(dx * dx + dy * dy + dz * dz);
+<span class="Apple-converted-space">                </span>};
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>const thumbDistance = distance(thumbTip, wrist);
+<span class="Apple-converted-space">                </span>const indexDistance = distance(indexTip, wrist);
+<span class="Apple-converted-space">                </span>const middleDistance = distance(middleTip, wrist);
+<span class="Apple-converted-space">                </span>const ringDistance = distance(ringTip, wrist);
+<span class="Apple-converted-space">                </span>const pinkyDistance = distance(pinkyTip, wrist);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">计算所有指尖距离的平均值</span>
+<span class="Apple-converted-space">                </span>const avgDistance = (thumbDistance + indexDistance + middleDistance + ringDistance + pinkyDistance) / 5;
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">判断手指是否伸直</span>
+<span class="Apple-converted-space">                </span>const isThumbExtended = thumbDistance > avgDistance * 0.7;
+<span class="Apple-converted-space">                </span>const isIndexExtended = indexDistance > avgDistance * 0.9;
+<span class="Apple-converted-space">                </span>const isMiddleExtended = middleDistance > avgDistance * 0.9;
+<span class="Apple-converted-space">                </span>const isRingExtended = ringDistance > avgDistance * 0.9;
+<span class="Apple-converted-space">                </span>const isPinkyExtended = pinkyDistance > avgDistance * 0.9;
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">手势判断</span>
+<span class="Apple-converted-space">                </span>const extendedFingers = [isIndexExtended, isMiddleExtended, isRingExtended, isPinkyExtended].filter(v => v).length;
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">握拳：所有手指都不伸直</span>
+<span class="Apple-converted-space">                </span>if (!isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended) {
+<span class="Apple-converted-space">                    </span>return 'fist';
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>// <span class="s1">张开手：所有手指都伸直</span>
+<span class="Apple-converted-space">                </span>else if (isIndexExtended && isMiddleExtended && isRingExtended && isPinkyExtended) {
+<span class="Apple-converted-space">                    </span>return 'open_hand';
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>// <span class="s1">抓取手势：只有拇指和食指伸直并靠近</span>
+<span class="Apple-converted-space">                </span>else if (isThumbExtended && isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended) {
+<span class="Apple-converted-space">                    </span>// <span class="s1">检查拇指和食指是否靠近</span>
+<span class="Apple-converted-space">                    </span>const thumbIndexDistance = distance(thumbTip, indexTip);
+<span class="Apple-converted-space">                    </span>if (thumbIndexDistance < avgDistance * 0.5) {
+<span class="Apple-converted-space">                        </span>return 'pinch';
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">如果手指部分伸直，可能是在旋转</span>
+<span class="Apple-converted-space">                </span>if (extendedFingers >= 2) {
+<span class="Apple-converted-space">                    </span>return 'rotation';
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>return 'unknown';
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">获取手势名称</span>
+<span class="Apple-converted-space">            </span>function getGestureName(gesture) {
+<span class="Apple-converted-space">                </span>switch(gesture) {
+<span class="Apple-converted-space">                    </span>case 'open_hand': return '<span class="s1">张开手</span>';
+<span class="Apple-converted-space">                    </span>case 'fist': return '<span class="s1">握拳</span>';
+<span class="Apple-converted-space">                    </span>case 'pinch': return '<span class="s1">抓取</span>';
+<span class="Apple-converted-space">                    </span>case 'rotation': return '<span class="s1">旋转</span>';
+<span class="Apple-converted-space">                    </span>default: return '<span class="s1">其他手势</span>';
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">处理手势变化</span>
+<span class="Apple-converted-space">            </span>function handleGestureChange(gesture) {
+<span class="Apple-converted-space">                </span>switch(gesture) {
+<span class="Apple-converted-space">                    </span>case 'open_hand':
+<span class="Apple-converted-space">                        </span>// <span class="s1">进入散开态</span>
+<span class="Apple-converted-space">                        </span>if (currentStatus !== 'scattered') {
+<span class="Apple-converted-space">                            </span>targetStatus = 'scattered';
+<span class="Apple-converted-space">                            </span>transitionProgress = 0;
+<span class="Apple-converted-space">                            </span>rotationEnabled = true;
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>case 'fist':
+<span class="Apple-converted-space">                        </span>// <span class="s1">回到合拢态</span>
+<span class="Apple-converted-space">                        </span>if (currentStatus !== 'closed') {
+<span class="Apple-converted-space">                            </span>targetStatus = 'closed';
+<span class="Apple-converted-space">                            </span>transitionProgress = 0;
+<span class="Apple-converted-space">                            </span>rotationEnabled = false;
+<span class="Apple-converted-space">                            </span>selectedPhotoIndex = -1;
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>case 'pinch':
+<span class="Apple-converted-space">                        </span>// <span class="s1">抓取照片（随机选择一张）</span>
+<span class="Apple-converted-space">                        </span>if (currentStatus === 'scattered') {
+<span class="Apple-converted-space">                            </span>selectedPhotoIndex = Math.floor(Math.random() * photos.length);
+<span class="Apple-converted-space">                            </span>targetStatus = 'photo-zoomed';
+<span class="Apple-converted-space">                            </span>transitionProgress = 0;
+<span class="Apple-converted-space">                            </span>rotationEnabled = false;
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>case 'rotation':
+<span class="Apple-converted-space">                        </span>// <span class="s1">启用旋转</span>
+<span class="Apple-converted-space">                        </span>if (currentStatus === 'scattered') {
+<span class="Apple-converted-space">                            </span>rotationEnabled = true;
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>updateUI();
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">更新</span>UI
+<span class="Apple-converted-space">            </span>function updateUI() {
+<span class="Apple-converted-space">                </span>const statusElement = document.getElementById('current-status');
+<span class="Apple-converted-space">                </span>const descElement = document.getElementById('status-description');
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>switch(targetStatus) {
+<span class="Apple-converted-space">                    </span>case 'closed':
+<span class="Apple-converted-space">                        </span>statusElement.textContent = '<span class="s1">合拢态</span> (<span class="s1">圣诞树</span>)';
+<span class="Apple-converted-space">                        </span>statusElement.style.color = '#32CD32';
+<span class="Apple-converted-space">                        </span>descElement.textContent = '<span class="s1">所有元素收拢为圣诞树圆锥体</span>';
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>case 'scattered':
+<span class="Apple-converted-space">                        </span>statusElement.textContent = '<span class="s1">散开态</span>';
+<span class="Apple-converted-space">                        </span>statusElement.style.color = '#FFD700';
+<span class="Apple-converted-space">                        </span>descElement.textContent = '<span class="s1">所有元素在空间中无序漂浮、散落</span>';
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                        </span>
+<span class="Apple-converted-space">                    </span>case 'photo-zoomed':
+<span class="Apple-converted-space">                        </span>statusElement.textContent = '<span class="s1">照片放大态</span>';
+<span class="Apple-converted-space">                        </span>statusElement.style.color = '#FF3366';
+<span class="Apple-converted-space">                        </span>descElement.textContent = selectedPhotoIndex >= 0 ?<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                            </span>`<span class="s1">正在放大第</span> ${selectedPhotoIndex + 1} <span class="s1">张照片</span>` :<span class="Apple-converted-space"> </span>
+<span class="Apple-converted-space">                            </span>'<span class="s1">放大单张照片</span>';
+<span class="Apple-converted-space">                        </span>break;
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">窗口大小调整处理</span>
+<span class="Apple-converted-space">            </span>function onWindowResize() {
+<span class="Apple-converted-space">                </span>camera.aspect = window.innerWidth / window.innerHeight;
+<span class="Apple-converted-space">                </span>camera.updateProjectionMatrix();
+<span class="Apple-converted-space">                </span>renderer.setSize(window.innerWidth, window.innerHeight);
+<span class="Apple-converted-space">                </span>composer.setSize(window.innerWidth, window.innerHeight);
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">照片上传功能</span>
+<span class="Apple-converted-space">            </span>function initPhotoUpload() {
+<span class="Apple-converted-space">                </span>const fileInput = document.getElementById('file-input');
+<span class="Apple-converted-space">                </span>const uploadBtn = document.getElementById('upload-btn');
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>uploadBtn.addEventListener('click', () => {
+<span class="Apple-converted-space">                    </span>fileInput.click();
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>fileInput.addEventListener('change', (event) => {
+<span class="Apple-converted-space">                    </span>const files = event.target.files;
+<span class="Apple-converted-space">                    </span>if (files.length > 0) {
+<span class="Apple-converted-space">                        </span>for (let i = 0; i < Math.min(files.length, 5); i++) {
+<span class="Apple-converted-space">                            </span>const file = files[i];
+<span class="Apple-converted-space">                            </span>const reader = new FileReader();
+<span class="Apple-converted-space">                            </span>
+<span class="Apple-converted-space">                            </span>reader.onload = (e) => {
+<span class="Apple-converted-space">                                </span>const img = new Image();
+<span class="Apple-converted-space">                                </span>img.onload = () => {
+<span class="Apple-converted-space">                                    </span>// <span class="s1">创建纹理</span>
+<span class="Apple-converted-space">                                    </span>const canvas = document.createElement('canvas');
+<span class="Apple-converted-space">                                    </span>canvas.width = 256;
+<span class="Apple-converted-space">                                    </span>canvas.height = 256;
+<span class="Apple-converted-space">                                    </span>const ctx = canvas.getContext('2d');
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>// <span class="s1">绘制图片到</span>canvas
+<span class="Apple-converted-space">                                    </span>const scale = Math.min(256 / img.width, 256 / img.height);
+<span class="Apple-converted-space">                                    </span>const width = img.width * scale;
+<span class="Apple-converted-space">                                    </span>const height = img.height * scale;
+<span class="Apple-converted-space">                                    </span>const x = (256 - width) / 2;
+<span class="Apple-converted-space">                                    </span>const y = (256 - height) / 2;
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>ctx.drawImage(img, x, y, width, height);
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>// <span class="s1">添加边框</span>
+<span class="Apple-converted-space">                                    </span>ctx.strokeStyle = '#FFD700';
+<span class="Apple-converted-space">                                    </span>ctx.lineWidth = 5;
+<span class="Apple-converted-space">                                    </span>ctx.strokeRect(0, 0, 256, 256);
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>const texture = new THREE.CanvasTexture(canvas);
+<span class="Apple-converted-space">                                    </span>photoTextures.push(texture);
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>// <span class="s1">创建新的照片平面</span>
+<span class="Apple-converted-space">                                    </span>const photoGeometry = new THREE.PlaneGeometry(8, 8);
+<span class="Apple-converted-space">                                    </span>const photoMaterial = new THREE.MeshStandardMaterial({
+<span class="Apple-converted-space">                                        </span>map: texture,
+<span class="Apple-converted-space">                                        </span>side: THREE.DoubleSide,
+<span class="Apple-converted-space">                                        </span>roughness: 0.3,
+<span class="Apple-converted-space">                                        </span>metalness: 0.1
+<span class="Apple-converted-space">                                    </span>});
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>const photo = new THREE.Mesh(photoGeometry, photoMaterial);
+<span class="Apple-converted-space">                                    </span>photo.castShadow = true;
+<span class="Apple-converted-space">                                    </span>photo.receiveShadow = true;
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>photo.userData = {
+<span class="Apple-converted-space">                                        </span>originalPosition: new THREE.Vector3(),
+<span class="Apple-converted-space">                                        </span>targetPosition: new THREE.Vector3(),
+<span class="Apple-converted-space">                                        </span>velocity: new THREE.Vector3(),
+<span class="Apple-converted-space">                                        </span>isPhoto: true,
+<span class="Apple-converted-space">                                        </span>index: photos.length,
+<span class="Apple-converted-space">                                        </span>scale: 1
+<span class="Apple-converted-space">                                    </span>};
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>photos.push(photo);
+<span class="Apple-converted-space">                                    </span>scene.add(photo);
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>// <span class="s1">更新</span>UI<span class="s1">照片计数</span>
+<span class="Apple-converted-space">                                    </span>document.getElementById('count').textContent = photos.length;
+<span class="Apple-converted-space">                                    </span>
+<span class="Apple-converted-space">                                    </span>// <span class="s1">短暂提示</span>
+<span class="Apple-converted-space">                                    </span>uploadBtn.textContent = '<span class="s1">上传成功</span>!';
+<span class="Apple-converted-space">                                    </span>setTimeout(() => {
+<span class="Apple-converted-space">                                        </span>uploadBtn.textContent = '<span class="s1">添加照片到圣诞树</span>';
+<span class="Apple-converted-space">                                    </span>}, 2000);
+<span class="Apple-converted-space">                                </span>};
+<span class="Apple-converted-space">                                </span>img.src = e.target.result;
+<span class="Apple-converted-space">                            </span>};
+<span class="Apple-converted-space">                            </span>reader.readAsDataURL(file);
+<span class="Apple-converted-space">                        </span>}
+<span class="Apple-converted-space">                    </span>}
+<span class="Apple-converted-space">                </span>});
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">动画循环</span>
+<span class="Apple-converted-space">            </span>function animate() {
+<span class="Apple-converted-space">                </span>requestAnimationFrame(animate);
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">更新元素位置</span>
+<span class="Apple-converted-space">                </span>updateElements();
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">更新相机旋转</span>
+<span class="Apple-converted-space">                </span>if (rotationEnabled) {
+<span class="Apple-converted-space">                    </span>camera.position.x = 100 * Math.sin(cameraRotation.y);
+<span class="Apple-converted-space">                    </span>camera.position.z = 100 * Math.cos(cameraRotation.y);
+<span class="Apple-converted-space">                    </span>camera.position.y = 30 + cameraRotation.x * 30;
+<span class="Apple-converted-space">                    </span>camera.lookAt(0, 30, 0);
+<span class="Apple-converted-space">                </span>}
+<span class="Apple-converted-space">                </span>
+<span class="Apple-converted-space">                </span>// <span class="s1">渲染场景</span>
+<span class="Apple-converted-space">                </span>composer.render();
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">初始化应用</span>
+<span class="Apple-converted-space">            </span>async function init() {
+<span class="Apple-converted-space">                </span>initThreeJS();
+<span class="Apple-converted-space">                </span>await initMediaPipeHands();
+<span class="Apple-converted-space">                </span>initPhotoUpload();
+<span class="Apple-converted-space">                </span>animate();
+<span class="Apple-converted-space">            </span>}
+<span class="Apple-converted-space">            </span>
+<span class="Apple-converted-space">            </span>// <span class="s1">启动应用</span>
+<span class="Apple-converted-space">            </span>init();
+<span class="Apple-converted-space">        </span>})();
+<span class="Apple-converted-space">    </span></script>
+</body>
+</html>

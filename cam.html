@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>摄像头预览</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        video {
+            border: 2px solid #333;
+            border-radius: 8px;
+            width: 640px;
+            height: 480px;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera" autoplay playsinline></video>
+
+    <script>
+        const video = document.getElementById('camera');
+
+        // 请求摄像头权限并显示视频
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error('无法访问摄像头:', err);
+                alert('无法访问摄像头，请检查权限或设备');
+            });
+    </script>
+</body>
+</html>
